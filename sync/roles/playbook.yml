@@ -20,7 +20,12 @@
     postgresql_users:
       - name: postgres
         password: password
-      
+      - name: semaphore
+        password: semaphore
+    postgresql_databases:
+        - name: "semaphore" 
+          owner: 'semaphore' 
+
     postgres_master_ip: "{{ hostvars['server']['ansible_host'] }}" # hostvars берутся и из инвентори, таким образом мы можем использовать указанные нами ip даже без gather_facts
     postgres_connection_ip: "{{ postgres_master_ip }}"
   roles:

@@ -82,23 +82,6 @@
       tasks_from: databases
     tags: 
       - db
-    vars:
-      postgresql_databases:
-        - name: "semaphore" 
-          state: 'present'
-          owner: 'semaphore'
-
-  - name: "Create semaphore user" 
-    postgresql_user:
-      name: "semaphore"
-      password: "semaphore"
-      priv: "ALL"
-      db: "semaphore"
-      state: "present"
-    become: true
-    become_user: postgres
-    become_method: sudo   
-
 
 
   - name: GRANT ALL_IN_SCHEMA PRIVILEGES ON DATABASE semaphore TO semaphore

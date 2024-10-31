@@ -18,11 +18,10 @@ Vagrant.configure("2") do |config|
       service ssh restart
       sudo add-apt-repository ppa:ansible/ansible
       sudo apt update -y && sudo apt -y install sshpass ansible 
-      sudo ansible-galaxy role install geerlingguy.postgresql
-      sudo ansible-galaxy role install geerlingguy.docker
-      sudo ansible-galaxy role install ome.prometheus_postgres
-      sudo ansible-galaxy collection install community.postgresql
-      sudo ansible-galaxy collection install community.docker
+      sudo -H -u vagrant bash -c 'ansible-galaxy role install geerlingguy.postgresql'
+      sudo -H -u vagrant bash -c 'ansible-galaxy role install geerlingguy.docker'
+      sudo -H -u vagrant bash -c 'ansible-galaxy collection install community.postgresql'
+      sudo -H -u vagrant bash -c 'ansible-galaxy collection install community.docker'
       chmod 600 /home/vagrant/.ssh/vagrant_test
       chmod 644 /home/vagrant/.ssh/vagrant_test.pub
     SHELL
