@@ -74,54 +74,48 @@
         host    all             all             localhost            md5
 
 
-  - name: "Create mike user" 
-    postgresql_user:
-      name: "mike"
-      password: "mike"
-    become: true
-    become_user: postgres
-    become_method: sudo   
-
-  - name: Restart PostgreSQL server
-    ansible.builtin.service:
-      name: "{{ postgresql_daemon }}"
-      state: restarted
-      enabled: yes
-
       ###  ADD Database  ###
 
   - name: "Create Database"
     include_role:
       name: geerlingguy.postgresql
       tasks_from: databases
+    tags: 
+      - db
     vars:
       postgresql_databases:
         - name: "semaphore" 
           state: 'present'
-          owner: 'mike'
+          owner: 'semaphore'
 
-
-  # - name: "copy migration script"
-  #   ansible.builtin.copy:
-  #     src: ./migration/employees.sql
-  #     dest: /tmp/employees.sql
-  #     mode: 0777
-  #     owner: postgres
-  #     group: postgres
-
-  # - name: "Run query from SQL script using UTF-8 client encoding for session and positional args"
-  #   community.postgresql.postgresql_script:
-  #     db: semaphore
-  #     path: /tmp/employees.sql
-  #     encoding: UTF-8
-  #     login_user: postgres
-  #     login_password: postgres
-  #   become: true
-  #   become_user: postgres
-  #   become_method: sudo
+  - name: "Create semaphore user" 
+    postgresql_user:
+      name: "semaphore"
+      password: "semaphore"
+      priv: "ALL"
+      db: "semaphore"
+      state: "present"
+    become: true
+    become_user: postgres
+    become_method: sudo   
 
 
 
+  - name: GRANT ALL_IN_SCHEMA PRIVILEGES ON DATABASE semaphore TO semaphore
+    community.postgresql.postgresql_privs:
+      db: semaphore
+      privs: SELECT,INSERT,UPDATE,DELETE
+      role: semaphore
+      objs: ALL_IN_SCHEMA
+    become: true
+    become_user: postgres
+    become_method: sudo 
+
+  - name: Restart PostgreSQL server
+    ansible.builtin.service:
+      name: "{{ postgresql_daemon }}"
+      state: restarted
+      enabled: yes
 
   - name: Healthcheck # хелсчек, забираем версию с постгрес.
     postgresql_query:
