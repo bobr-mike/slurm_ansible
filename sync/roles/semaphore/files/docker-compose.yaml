@@ -1,5 +1,6 @@
 services:
     semaphore:
+        restart: always
         ports:
             - 3000:3000
         image: semaphoreui/semaphore:v2.10.32
