@@ -1,0 +1,31 @@
+---
+- name: "install semaphore"  
+  hosts: server
+  become: true
+  vars:
+    docker_edition: 'ce'
+    docker_packages:
+        - "docker-{{ docker_edition }}"
+        - "docker-{{ docker_edition }}-cli"
+        - "docker-{{ docker_edition }}-rootless-extras"
+    docker_packages_state: present    
+    docker_install_compose_plugin: true
+    docker_compose_package: docker-compose-plugin
+    docker_compose_package_state: present
+    
+    docker_users:
+      - vagrant
+
+    postgres_users_no_log: false # включаем отображение паролей в консоле для отладки, само собой в продакшене это надо выключить
+    postgresql_users:
+      - name: postgres
+        password: password
+      
+    postgres_master_ip: "{{ hostvars['server']['ansible_host'] }}" # hostvars берутся и из инвентори, таким образом мы можем использовать указанные нами ip даже без gather_facts
+    postgres_connection_ip: "{{ postgres_master_ip }}"
+  roles:
+    - geerlingguy.docker
+    - geerlingguy.postgresql
+    - postgres
+    - semaphore
+

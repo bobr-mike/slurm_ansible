@@ -1,0 +1,15 @@
+services:
+    semaphore:
+        ports:
+            - 3000:3000
+        image: semaphoreui/semaphore:v2.10.32
+        environment:
+            SEMAPHORE_DB_DIALECT: postgres
+            SEMAPHORE_DB_HOST: 192.168.9.7
+            SEMAPHORE_DB_NAME: semaphore
+            SEMAPHORE_DB_USER: postgres
+            SEMAPHORE_DB_PASS: password
+            SEMAPHORE_ADMIN: admin
+            SEMAPHORE_ADMIN_PASSWORD: admin
+            SEMAPHORE_ADMIN_NAME: admin
+            SEMAPHORE_ADMIN_EMAIL: admin@localhost

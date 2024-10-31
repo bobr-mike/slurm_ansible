@@ -1,0 +1,131 @@
+  # включаем таски из роли
+  - name: "Initialise variables"
+    include_role:
+      name: geerlingguy.postgresql
+      tasks_from: variables
+
+  - name: "Setup postgres"
+    include_role:
+      name: geerlingguy.postgresql
+      tasks_from: setup-Debian
+
+  - name: "Init postgres"
+    include_role:
+      name: geerlingguy.postgresql
+      tasks_from: initialize
+
+  - name: Start PostgreSQL server
+    systemd:
+      name: "{{ postgresql_daemon }}"
+      state: started
+
+  - name: "Configure postgres"
+    include_role:
+      name: geerlingguy.postgresql
+      tasks_from: configure
+
+  - name: "Configure users"
+    include_role:
+      name: geerlingguy.postgresql
+      tasks_from: users
+
+  - name: "install acl"
+    ansible.builtin.apt:
+        name: acl
+        state: present
+
+  - name: "Update postgresql.conf"
+    lineinfile: # замена одной строки в файле по регулярному выражению. Регулярные выражения сложная штука, но рекомендую их практиковать, сохраняет много времени и сил
+      path: "{{ postgresql_config_path }}/postgresql.conf"
+      regexp: "{{ item.regexp }}"
+      line: "{{ item.line }}"
+    with_items:
+    - regexp: "#listen_addresses = 'localhost'" # само регулярное выражение (в этом случае просто строка)
+      line: "listen_addresses = '{{ postgres_master_ip }}'" # замена
+    - regexp: "#wal_level = minimal"
+      line: "wal_level = hot_standby"
+    - regexp: "#synchronous_commit = on"
+      line: "synchronous_commit = local"
+    - regexp: "#archive_mode = off"
+      line: "archive_mode = on"
+    - regexp: "#archive_command = ''"
+      line: "archive_command = 'cp %p /var/lib/pgsql/{{ postgresql_version }}/archive/%f'"
+    - regexp: "#max_wal_senders = 0"
+      line: "max_wal_senders = 2"
+    - regexp: "#wal_keep_segments = 0"
+      line: "wal_keep_segments = 2"
+    - regexp: "#synchronous_standby_names = ''"
+      line: "synchronous_standby_names = 'slave01'"
+
+  - name: "Create archive directory"
+    file:
+      path: /var/lib/pgsql/{{ postgresql_version }}/archive
+      mode: 0700
+      owner: postgres
+      group: postgres
+      state: directory
+
+  - name: "Update pg_hba.conf"
+    blockinfile: # блоковая замена, Ансибл сам заменит блок в файле и создаст маркер, для кастомных маркеров (чтобы случайно ничего не перезаписать) рекомендую использовать атрибут marker
+      path: "{{ postgresql_config_path }}/pg_hba.conf"
+      insertafter: "#host replication postgres ::1/128 ident"
+      block: | # сам блок, | показывает yaml что дальше идет текст с переносами
+        host    all             all             0.0.0.0/0            md5
+        host    all             all             localhost            md5
+
+
+  - name: "Create mike user" 
+    postgresql_user:
+      name: "mike"
+      password: "mike"
+    become: true
+    become_user: postgres
+    become_method: sudo   
+
+  - name: Restart PostgreSQL server
+    ansible.builtin.service:
+      name: "{{ postgresql_daemon }}"
+      state: restarted
+      enabled: yes
+
+      ###  ADD Database  ###
+
+  - name: "Create Database"
+    include_role:
+      name: geerlingguy.postgresql
+      tasks_from: databases
+    vars:
+      postgresql_databases:
+        - name: "semaphore" 
+          state: 'present'
+          owner: 'mike'
+
+
+  # - name: "copy migration script"
+  #   ansible.builtin.copy:
+  #     src: ./migration/employees.sql
+  #     dest: /tmp/employees.sql
+  #     mode: 0777
+  #     owner: postgres
+  #     group: postgres
+
+  # - name: "Run query from SQL script using UTF-8 client encoding for session and positional args"
+  #   community.postgresql.postgresql_script:
+  #     db: semaphore
+  #     path: /tmp/employees.sql
+  #     encoding: UTF-8
+  #     login_user: postgres
+  #     login_password: postgres
+  #   become: true
+  #   become_user: postgres
+  #   become_method: sudo
+
+
+
+
+  - name: Healthcheck # хелсчек, забираем версию с постгрес.
+    postgresql_query:
+      db: "semaphore"
+      query: SELECT version()
+    become: true
+    become_user: postgres
